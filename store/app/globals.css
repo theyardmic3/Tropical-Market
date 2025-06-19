@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, :root {
+  height: 100%;
+}
+
+/* Custom font sizes for each breakpoint */
+
+/* Below 320px */
+@media (max-width: 320px) {
+  .text-xs-custom {
+      font-size: 0.75rem; /* 12px */
+  }
+}
+
+/* Below 375px */
+@media (max-width: 375px) {
+  .text-xs-custom {
+      font-size: 0.875rem; /* 14px */
+  }
+}
+
+/* Below 428px */
+@media (max-width: 428px) {
+  .text-sm-custom {
+      font-size: 0.95rem; /* 15.2px */
+  }
+}
+
+/* Below 640px (sm and below) */
+@media (max-width: 639px) {
+  .text-sm-custom {
+      font-size: 0.875rem; /* 14px */
+  }
+}
+
+/* From 640px to 767px (sm breakpoint) */
+@media (min-width: 640px) and (max-width: 767px) {
+  .text-sm-custom {
+      font-size: 1rem; /* 16px */
+  }
+}
+
+/* From 768px to 1023px (md breakpoint) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .text-md-custom {
+      font-size: 1.125rem; /* 18px */
+  }
+}
+
+/* From 1024px to 1279px (lg breakpoint) */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .text-lg-custom {
+      font-size: 1.25rem; /* 20px */
+  }
+}
+
+/* From 1280px and up (xl breakpoint) */
+@media (min-width: 1280px) {
+  .text-xl-custom {
+      font-size: 1.5rem; /* 24px */
+  }
+}
