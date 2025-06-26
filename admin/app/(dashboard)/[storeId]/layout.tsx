@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import prismadb from "@/lib/prismadb";
+import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/navbar";
 
 interface DashboardType {
@@ -16,14 +16,14 @@ export default async function Dashboard({ children, params }: DashboardType) {
     redirect("/sign-in");
   }
 
-  const store = await prismadb?.store.findFirst({
-    where: {
-      id: storeId,
-      userId,
-    },
-  });
+  const { data: store, error } = await supabase
+    .from("store")
+    .select("*")
+    .eq("id", storeId)
+    .eq("userId", userId)
+    .single();
 
-  if (!store) {
+  if (error || !store) {
     redirect("/");
   }
 

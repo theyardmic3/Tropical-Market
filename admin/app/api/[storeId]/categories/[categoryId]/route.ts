@@ -1,126 +1,123 @@
-import prismadb from "@/lib/prismadb";
-import { auth } from '@clerk/nextjs/server'
-import { NextResponse } from "next/server"
+import { supabase } from "@/lib/supabase";
+import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-export async function GET (
-    req: Request,
-    { params }: { params: Promise<{ categoryId: string }>}
+// GET category with billboard info
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ categoryId: string }> }
 ) {
-    try {
-        const { categoryId } = await params; 
-        if(!categoryId) {
-            return new NextResponse("Category id is required", { status: 400 });
-        }
+  try {
+    const { categoryId } = await params;
 
-        const category = await prismadb.category.findUnique({
-            where: {
-                id: categoryId,
-            },
-            include: {
-                billboard: true
-            }
-        })
-
-        return NextResponse.json(category);
-    } catch (err) {
-        console.log('[CATEGORY_GET]', err)
-        return new NextResponse('Internal error', { status: 500 })
+    if (!categoryId) {
+      return new NextResponse("Category id is required", { status: 400 });
     }
+
+    const { data: category, error } = await supabase
+      .from("category")
+      .select("*, billboard(*)")
+      .eq("id", categoryId)
+      .single();
+
+    if (error) {
+      console.error("[CATEGORY_GET]", error.message);
+      return new NextResponse("Failed to fetch category", { status: 500 });
+    }
+
+    return NextResponse.json(category);
+  } catch (err) {
+    console.log("[CATEGORY_GET]", err);
+    return new NextResponse("Internal error", { status: 500 });
+  }
 }
 
-export async function PATCH (
-    req: Request,
-    { params }: { params: Promise<{ storeId: string, categoryId: string }>}
+// PATCH: update category
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ storeId: string; categoryId: string }> }
 ) {
-    try {
-        const { userId } = await auth();
-        const body = await req.json();
+  try {
+    const { userId } = await auth();
+    const { name, billboardId } = await req.json();
+    const { storeId, categoryId } = await params;
 
-        const { name, billboardId } = body;
-        const { storeId, categoryId } = await params; 
+    if (!userId) return new NextResponse("Unauthenticated", { status: 401 });
+    if (!name) return new NextResponse("Name is required", { status: 400 });
+    if (!billboardId)
+      return new NextResponse("Billboard ID is required", { status: 400 });
+    if (!categoryId)
+      return new NextResponse("Category id is required", { status: 400 });
 
-        if (!userId) {
-            return new NextResponse("Unauthenticated", { status: 401 })
-        }
+    const { data: store, error: storeError } = await supabase
+      .from("store")
+      .select("id")
+      .eq("id", storeId)
+      .eq("userId", userId)
+      .single();
 
-        if (!name) {
-            return new NextResponse("Name is required", { status: 400 });
-        }
-
-        if (!billboardId) {
-            return new NextResponse("Billboard URL is required", { status: 400 });
-        }
-
-        if(!categoryId) {
-            return new NextResponse("Category id is required", { status: 400 });
-        }
-
-        const storeByUserId = await prismadb.store.findFirst({
-            where: {
-                id: storeId,
-                userId
-            }
-        })
-
-        if (!storeByUserId) {
-            return new NextResponse("Unauthorized", { status: 403 });
-        }
-
-        const category = await prismadb.category.updateMany({
-            where: {
-                id: categoryId
-            },
-            data: {
-                name,
-                billboardId,
-            }
-        })
-
-        return NextResponse.json(category);
-    } catch (err) {
-        console.log('[CATEGORY_PATCH]', err)
-        return new NextResponse('Internal error', { status: 500 })
+    if (storeError || !store) {
+      return new NextResponse("Unauthorized", { status: 403 });
     }
+
+    const { data: updatedCategory, error: updateError } = await supabase
+      .from("category")
+      .update({ name, billboardId })
+      .eq("id", categoryId)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("[CATEGORY_PATCH]", updateError.message);
+      return new NextResponse("Failed to update category", { status: 500 });
+    }
+
+    return NextResponse.json(updatedCategory);
+  } catch (err) {
+    console.log("[CATEGORY_PATCH]", err);
+    return new NextResponse("Internal error", { status: 500 });
+  }
 }
 
-//// Delete Method
-
-export async function DELETE (
-    req: Request,
-    { params }: { params: Promise<{ storeId: string, categoryId: string }>}
+// DELETE: remove category
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ storeId: string; categoryId: string }> }
 ) {
-    try {
-        const { userId } = await auth();
-        const { storeId, categoryId } = await params; 
+  try {
+    const { userId } = await auth();
+    const { storeId, categoryId } = await params;
 
-        if (!userId) {
-            return new NextResponse("Unauthenticated", { status: 401 })
-        }
+    if (!userId) return new NextResponse("Unauthenticated", { status: 401 });
+    if (!categoryId)
+      return new NextResponse("Category id is required", { status: 400 });
 
-        if(!categoryId) {
-            return new NextResponse("Category id is required", { status: 400 });
-        }
+    const { data: store, error: storeError } = await supabase
+      .from("store")
+      .select("id")
+      .eq("id", storeId)
+      .eq("userId", userId)
+      .single();
 
-        const storeByUserId = await prismadb.store.findFirst({
-            where: {
-                id: storeId,
-                userId
-            }
-        })
-
-        if (!storeByUserId) {
-            return new NextResponse("Unauthorized", { status: 403 });
-        }
-
-        const category = await prismadb.category.deleteMany({
-            where: {
-                id: categoryId,
-            }
-        })
-
-        return NextResponse.json(category);
-    } catch (err) {
-        console.log('[CATEGORY_DELETE]', err)
-        return new NextResponse('Internal error', { status: 500 })
+    if (storeError || !store) {
+      return new NextResponse("Unauthorized", { status: 403 });
     }
+
+    const { data: deleted, error: deleteError } = await supabase
+      .from("category")
+      .delete()
+      .eq("id", categoryId)
+      .select()
+      .single();
+
+    if (deleteError) {
+      console.error("[CATEGORY_DELETE]", deleteError.message);
+      return new NextResponse("Failed to delete category", { status: 500 });
+    }
+
+    return NextResponse.json(deleted);
+  } catch (err) {
+    console.log("[CATEGORY_DELETE]", err);
+    return new NextResponse("Internal error", { status: 500 });
+  }
 }

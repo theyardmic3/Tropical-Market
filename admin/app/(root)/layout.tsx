@@ -1,31 +1,33 @@
-import { auth } from '@clerk/nextjs/server'
-import { redirect } from "next/navigation"
-import prismadb from "@/lib/prismadb";
+import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 interface DashboardType {
-    children: React.ReactNode;
+  children: React.ReactNode;
 }
 
-export default async function SetupLayout({children}: DashboardType) {
-    const { userId } = await auth();
+export default async function SetupLayout({ children }: DashboardType) {
+  const { userId } = await auth();
 
-    if (!userId) {
-        redirect('/sign-in')
-    }
+  if (!userId) {
+    redirect('/sign-in');
+  }
 
-    const store = await prismadb?.store?.findFirst({
-        where: {
-            userId
-        }
-    })
+  const { data: store, error } = await supabase
+    .from('store')
+    .select('id')
+    .eq('userId', userId)
+    .limit(1)
+    .single();
 
-    if (store) {
-        redirect(`/${store.id}`);
-    }
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching store:', error.message);
+    // Optional: throw or show error UI
+  }
 
-    return (
-        <>
-            {children}
-        </>
-    )
+  if (store) {
+    redirect(`/${store.id}`);
+  }
+
+  return <>{children}</>;
 }

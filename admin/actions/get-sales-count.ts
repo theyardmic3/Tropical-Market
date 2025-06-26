@@ -1,12 +1,16 @@
-import prismadb from "@/lib/prismadb";
+import { supabase } from "@/lib/supabase";
 
 export const getSalesCount = async (storeId: string) => {
-    const salesCount = await prismadb.order.count({
-        where: {
-            storeId,
-            isPaid: true,
-        }
-    });
+  const { data, error } = await supabase
+    .from("order")
+    .select("id", { count: "exact", head: true })
+    .eq("storeId", storeId)
+    .eq("isPaid", true);
 
-    return salesCount;
-}
+  if (error) {
+    console.error("Failed to count sales:", error.message);
+    return 0;
+  }
+
+  return data?.length ?? 0;
+};

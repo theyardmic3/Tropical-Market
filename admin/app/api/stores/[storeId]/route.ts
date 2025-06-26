@@ -1,79 +1,93 @@
-import prismadb from "@/lib/prismadb";
-import { auth } from '@clerk/nextjs/server'
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
+import { auth } from '@clerk/nextjs/server';
+import { supabase } from "@/lib/supabase";
 
-export async function PATCH (
-    req: Request,
-    { params }: { params: Promise<{ storeId: string }>}
+// PATCH - Update Store Name
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ storeId: string }> }
 ) {
-    try {
-        const { userId } = await auth();
-        const { storeId } = await params;
-        const body = await req.json();
+  try {
+    const { userId } = await auth();
+    const { storeId } = await params;
+    const { name } = await req.json();
 
-        const { name } = body;
+    if (!userId) return new NextResponse("Unauthenticated", { status: 401 });
+    if (!name) return new NextResponse("Name is required", { status: 400 });
+    if (!storeId) return new NextResponse("Store id is required", { status: 400 });
 
-        if (!userId) {
-            return new NextResponse("Unauthenticated", { status: 401 })
-        }
+    // Check ownership
+    const { data: store, error: fetchErr } = await supabase
+      .from("store")
+      .select("id")
+      .eq("id", storeId)
+      .eq("userId", userId)
+      .single();
 
-        if (!name) {
-            return new NextResponse("Name is required", { status: 400 });
-        }
-
-        if(!storeId) {
-            return new NextResponse("Store id is required", { status: 400 });
-        }
-
-        const store = await prismadb.store.updateMany({
-            where: {
-                id: storeId,
-                userId
-            },
-            data: {
-                name
-            }
-        })
-
-        return NextResponse.json(store);
-    } catch (err) {
-        console.log('[STORE_PATCH]', err)
-        return new NextResponse('Internal error', { status: 500 })
-    } finally {
-
+    if (fetchErr || !store) {
+      return new NextResponse("Unauthorized", { status: 403 });
     }
+
+    // Update store
+    const { data: updated, error } = await supabase
+      .from("store")
+      .update({ name })
+      .eq("id", storeId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[STORE_PATCH]", error.message);
+      return new NextResponse("Failed to update store", { status: 500 });
+    }
+
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error("[STORE_PATCH]", err);
+    return new NextResponse("Internal error", { status: 500 });
+  }
 }
 
-//// Delete Method
-
-export async function DELETE (
-    req: Request,
-    { params }: { params: Promise<{ storeId: string }>}
+// DELETE - Delete Store
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ storeId: string }> }
 ) {
-    try {
-        const { userId } = await auth();
-        const { storeId } = await params;
+  try {
+    const { userId } = await auth();
+    const { storeId } = await params;
 
-        if (!userId) {
-            return new NextResponse("Unauthenticated", { status: 401 })
-        }
+    if (!userId) return new NextResponse("Unauthenticated", { status: 401 });
+    if (!storeId) return new NextResponse("Store id is required", { status: 400 });
 
-        if(!storeId) {
-            return new NextResponse("Store id is required", { status: 400 });
-        }
+    // Validate ownership
+    const { data: store, error: fetchErr } = await supabase
+      .from("store")
+      .select("id")
+      .eq("id", storeId)
+      .eq("userId", userId)
+      .single();
 
-        const store = await prismadb.store.deleteMany({
-            where: {
-                id: storeId,
-                userId
-            }
-        })
-
-        return NextResponse.json(store);
-    } catch (err) {
-        console.log('[STORE_DELETE]', err)
-        return new NextResponse('Internal error', { status: 500 })
-    } finally {
-
+    if (fetchErr || !store) {
+      return new NextResponse("Unauthorized", { status: 403 });
     }
+
+    // Delete store
+    const { data: deleted, error } = await supabase
+      .from("store")
+      .delete()
+      .eq("id", storeId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[STORE_DELETE]", error.message);
+      return new NextResponse("Failed to delete store", { status: 500 });
+    }
+
+    return NextResponse.json(deleted);
+  } catch (err) {
+    console.error("[STORE_DELETE]", err);
+    return new NextResponse("Internal error", { status: 500 });
+  }
 }

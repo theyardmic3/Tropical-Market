@@ -1,12 +1,16 @@
-import prismadb from "@/lib/prismadb";
+import { supabase } from "@/lib/supabase";
 
 export const getStockCount = async (storeId: string) => {
-    const salesCount = await prismadb.product.count({
-        where: {
-            storeId,
-            isArchived: false,
-        }
-    });
+  const { count, error } = await supabase
+    .from("product")
+    .select("*", { count: "exact", head: true })
+    .eq("storeId", storeId)
+    .eq("isArchived", false);
 
-    return salesCount;
-}
+  if (error) {
+    console.error("Failed to count products in stock:", error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+};
