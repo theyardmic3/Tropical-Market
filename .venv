@@ -14,7 +14,7 @@ NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL="/"
 
 # Supabase database connection string via connection pooling service (Supavisor).
 # Connect to Supabase via connection pooling
-DATABASE_URL="postgresql://postgres.lqsnutvxuxgkrtqztmzi:5stGF8HaB71DG3KI@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?pgbouncer=true"
+DATABASE_URL="postgresql://postgres.lqsnutvxuxgkrtqztmzi:5stGF8HaB71DG3KI@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true"
 
 # Direct connection to the database. Used for migrations
 DIRECT_URL="postgresql://postgres.lqsnutvxuxgkrtqztmzi:5stGF8HaB71DG3KI@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres"
